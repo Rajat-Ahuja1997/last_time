@@ -15,6 +15,10 @@
         "usesNonExemptEncryption": false
       }
     },
+    "android": {
+      "package": "com.lasttime.app"
+    },
+    "scheme": "com.lasttime.app",
     "plugins": [
       "expo-router",
       [

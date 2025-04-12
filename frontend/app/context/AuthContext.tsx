@@ -1,8 +1,9 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+import { supabase } from '../../utils/supabase';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -27,10 +28,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    expoClientId: 'YOUR_EXPO_CLIENT_ID',
-    iosClientId: 'YOUR_IOS_CLIENT_ID',
-    webClientId: 'YOUR_WEB_CLIENT_ID',
+  const [_, response, promptAsync] = Google.useAuthRequest({
+    iosClientId: '176005417528-v7ot7b9n38uhapl166k0rmss4qt0gi88.apps.googleusercontent.com',
+    webClientId: '176005417528-v7ot7b9n38uhapl166k0rmss4qt0gi88.apps.googleusercontent.com'
   });
 
   useEffect(() => {
@@ -39,8 +39,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (response?.type === 'success') {
-      const { authentication } = response;
-      handleGoogleSignIn(authentication?.accessToken);
+      const { id_token } = response.params;
+      handleGoogleSignIn(id_token);
     }
   }, [response]);
 
@@ -57,24 +57,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const handleGoogleSignIn = async (accessToken: string | undefined) => {
-    if (!accessToken) return;
+  const handleGoogleSignIn = async (idToken: string | undefined) => {
+    if (!idToken) return;
 
     try {
-      const userInfoResponse = await fetch('https://www.googleapis.com/userinfo/v2/me', {
-        headers: { Authorization: `Bearer ${accessToken}` },
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
       });
-      const userInfo = await userInfoResponse.json();
 
-      const userData: User = {
-        id: userInfo.id,
-        email: userInfo.email,
-        name: userInfo.name,
-        photo: userInfo.picture,
-      };
+      if (error) {
+        console.error('Supabase sign in error:', error);
+        throw error;
+      }
 
-      setUser(userData);
-      await AsyncStorage.setItem('user', JSON.stringify(userData));
+      if (data.user) {
+        const userData: User = {
+          id: data.user.id,
+          email: data.user.email ?? '',
+          name: data.user.user_metadata?.full_name,
+          photo: data.user.user_metadata?.avatar_url
+        };
+
+        setUser(userData);
+        await AsyncStorage.setItem('user', JSON.stringify(userData));
+      }
     } catch (error) {
       console.error('Error signing in with Google:', error);
     }
@@ -100,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userData: User = {
         id: credential.user,
         email: credential.email || '',
-        name: credential.fullName?.givenName,
+        name: credential.fullName?.givenName || undefined,
       };
 
       setUser(userData);
@@ -112,6 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      await supabase.auth.signOut();
       await AsyncStorage.removeItem('user');
       setUser(null);
     } catch (error) {
