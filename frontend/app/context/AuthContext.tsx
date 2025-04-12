@@ -30,8 +30,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const [_, response, promptAsync] = Google.useAuthRequest({
     iosClientId: '176005417528-v7ot7b9n38uhapl166k0rmss4qt0gi88.apps.googleusercontent.com',
-    webClientId: '176005417528-v7ot7b9n38uhapl166k0rmss4qt0gi88.apps.googleusercontent.com'
-  });
+    webClientId: '176005417528-qho127du5mqt91uk51qf0j38liosuul2.apps.googleusercontent.com',
+    expoClientId: '176005417528-v7ot7b9n38uhapl166k0rmss4qt0gi88.apps.googleusercontent.com',
+  } as const);
 
   useEffect(() => {
     loadUser();
