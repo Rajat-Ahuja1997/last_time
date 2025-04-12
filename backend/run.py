@@ -31,7 +31,7 @@ if __name__ == "__main__":
     
     # Run the FastAPI application with uvicorn
     uvicorn.run(
-        app,
+        'run:app',
         host="0.0.0.0",  # Allow external connections
         port=8000,       # Port number
         reload=True      # Enable auto-reload for development
